@@ -2,19 +2,19 @@
 $id = (int)($_GET['id'] ?? 0);
 $s = db()->prepare('SELECT l.*, u.nickname FROM words_lists l JOIN words_users u ON u.id=l.user_id WHERE l.id=?'); $s->execute([$id]); $list = $s->fetch();
 if (!$list) { http_response_code(404); exit(t('Pack not found')); }
-$s = db()->prepare('SELECT term,definition FROM words_words WHERE list_id=? ORDER BY position'); $s->execute([$id]); $words = $s->fetchAll();
+$s = db()->prepare('SELECT term,definition FROM words_words WHERE list_id=? ORDER BY position'); $s->execute([$id]); $words = $s->fetchAll(); $sig = md5(json_encode($words));
 
 // Study state lives in the session (per pack)
 $S = &$_SESSION["study$id"]; $S = $S ?? [];
 $touch = array_intersect_key($_GET, array_flip(['mode', 'front', 'shuf', 'start']));
-if ($touch || empty($S['deck'])) {
+if ($touch || empty($S['deck']) || ($S['sig'] ?? '') !== $sig) {
     $old = $S['missed'] ?? [];
     $m = $_GET['mode'] ?? $S['mode'] ?? 'cards'; $S['mode'] = in_array($m, ['cards', 'write', 'choice'], true) ? $m : 'cards';
     $S['front'] = ($_GET['front'] ?? $S['front'] ?? 'a') === 'b' ? 'b' : 'a';   // which language is shown
     $S['shuf'] = ($_GET['shuf'] ?? $S['shuf'] ?? '1') === '0' ? '0' : '1';
     $idx = (($_GET['start'] ?? '') === 'missed' && $old) ? $old : array_keys($words);
     if ($S['shuf'] === '1') shuffle($idx);
-    $S = array_merge($S, ['deck' => array_values($idx), 'i' => 0, 'score' => 0, 'missed' => [], 'res' => null, 'oi' => -1, 'opts' => []]);
+    $S = array_merge($S, ['deck' => array_values($idx), 'i' => 0, 'score' => 0, 'missed' => [], 'res' => null, 'oi' => -1, 'opts' => [], 'sig' => $sig]);
     if ($touch) go("study.php?id=$id");
 }
 $mode = $S['mode']; $front = $S['front']; $n = count($S['deck']);

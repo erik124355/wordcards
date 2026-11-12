@@ -6,18 +6,18 @@ $sql = 'SELECT l.*, u.nickname, (SELECT COUNT(*) FROM words_words w WHERE w.list
 if ($mine) { $sql .= ' AND l.user_id=?'; $p[] = user(); }
 else {
     if ($q !== '') { $sql .= ' AND (l.title LIKE ? OR l.description LIKE ?)'; $p[] = $p[] = "%$q%"; }
-    if ($tag !== '') { $sql .= " AND CONCAT(',',l.tags,',') LIKE ?"; $p[] = "%,$tag,%"; }
+    if ($tag !== '') { $sql .= ' AND l.tags LIKE ?'; $p[] = "%$tag%"; }
 }
 $s = db()->prepare($sql . ' ORDER BY l.created_at DESC LIMIT 100'); $s->execute($p); $lists = $s->fetchAll();
 page_head($mine ? t('My packs') : t('Browse')); ?>
 <h2><?= $mine ? e('My packs') : e('Browse word packs') ?></h2>
 <?php if (!$mine): ?>
-<form class="row" method="get">
+<form class="row" method="get" id="searchform">
   <input name="q" value="<?= h($q) ?>" placeholder="<?= e('Search title or description') ?>">
   <input name="tag" value="<?= h($tag) ?>" placeholder="<?= e('Tag (e.g. spanish, high school)') ?>"><button class="btn"><?= e('Search') ?></button>
 </form>
 <?php endif; ?>
-<div class="grid">
+<div id="results"><div class="grid">
 <?php foreach ($lists as $l): ?>
   <div class="card pack">
     <a href="study.php?id=<?= $l['id'] ?>"><b><?= h($l['title']) ?></b></a>
@@ -28,4 +28,16 @@ page_head($mine ? t('My packs') : t('Browse')); ?>
   </div>
 <?php endforeach; ?>
 </div>
-<?php if (!$lists): ?><p class="muted"><?= e('No packs found.') ?></p><?php endif; page_foot();
+<?php if (!$lists): ?><p class="muted"><?= e('No packs found.') ?></p><?php endif; ?></div>
+<script>
+// live search: filters while typing (title/description and partial tags), no page reload
+const sf = document.getElementById('searchform');
+if (sf) { let timer, n = 0;
+  const run = () => { const my = ++n, qs = new URLSearchParams(new FormData(sf)).toString();
+    fetch('index.php?' + qs).then(r => r.text()).then(html => {
+      if (my !== n) return; // ignore out-of-date responses
+      const d = new DOMParser().parseFromString(html, 'text/html').getElementById('results');
+      if (d) { document.getElementById('results').innerHTML = d.innerHTML; history.replaceState(null, '', '?' + qs); } }); };
+  sf.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 250); }); }
+</script>
+<?php page_foot();
