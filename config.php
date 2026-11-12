@@ -1,7 +1,39 @@
 <?php
-// ---- Edit these to match your MySQL / phpMyAdmin setup ----
-const DB_HOST = 'localhost', DB_NAME = '213601', DB_USER = 'root', DB_PASS = '';
-// -----------------------------------------------------------
+$envFile = __DIR__ . DIRECTORY_SEPARATOR . '.env';
+$envContents = @file_get_contents($envFile);
+if ($envContents === false) {
+    throw new RuntimeException('Unable to read the application .env file.');
+}
+
+$env = [];
+foreach (preg_split('/\r\n|\r|\n/', $envContents) as $line) {
+    $line = trim($line);
+    if ($line === '' || $line[0] === '#') {
+        continue;
+    }
+
+    if (!preg_match('/^([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/', $line, $matches)) {
+        throw new RuntimeException('Invalid entry in the application .env file.');
+    }
+
+    $key = $matches[1];
+    $value = $matches[2];
+    if (isset($env[$key])) {
+        throw new RuntimeException('Duplicate entry in the application .env file.');
+    }
+    if (strlen($value) >= 2 && (($value[0] === '"' && substr($value, -1) === '"') || ($value[0] === "'" && substr($value, -1) === "'"))) {
+        $value = substr($value, 1, -1);
+    }
+    $env[$key] = $value;
+}
+
+foreach (['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
+    if (!array_key_exists($key, $env)) {
+        throw new RuntimeException('Missing ' . $key . ' in the application .env file.');
+    }
+    define($key, $env[$key]);
+}
+
 session_start();
 function db() {
     static $p;
