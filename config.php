@@ -112,3 +112,36 @@ function snap_language($s) {
     }
     return mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
 }
+
+// ---------- interface language: Finnish (default) / English ----------
+function ui() { return ($_SESSION['ui'] ?? 'fi') === 'en' ? 'en' : 'fi'; }
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['fi', 'en'], true)) {
+    $_SESSION['ui'] = $_GET['lang']; $q = $_GET; unset($q['lang']);
+    go(basename($_SERVER['SCRIPT_NAME']) . ($q ? '?' . http_build_query($q) : ''));
+}
+function lang_url($l) { return basename($_SERVER['SCRIPT_NAME']) . '?' . http_build_query(array_merge($_GET, ['lang' => $l])); }
+// t('English text') returns the Finnish version when the UI is Finnish; extra args fill %s / %d
+function t($s, ...$a) { static $fi; $fi ??= fi_dict(); $x = ui() === 'fi' ? ($fi[$s] ?? $s) : $s; return $a ? vsprintf($x, $a) : $x; }
+function e($s, ...$a) { return h(t($s, ...$a)); }
+function fi_dict() { return [
+ 'Browse'=>'Selaa','My packs'=>'Omat paketit','+ New pack'=>'+ Uusi paketti','Log out'=>'Kirjaudu ulos','Log in'=>'Kirjaudu sisään','Sign up'=>'Rekisteröidy',
+ 'Create your account'=>'Luo tili','Welcome back'=>'Tervetuloa takaisin','Just a nickname and a password, nothing else.'=>'Vain nimimerkki ja salasana, ei muuta.',
+ 'Log in to create and edit your own packs.'=>'Kirjaudu sisään luodaksesi ja muokataksesi omia pakettejasi.','Nickname'=>'Nimimerkki','Password'=>'Salasana',
+ 'Already have an account?'=>'Onko sinulla jo tili?','New here?'=>'Uusi täällä?','Create an account'=>'Luo tili',
+ 'Nickname must be 3-30 characters'=>'Nimimerkin pituus on 3–30 merkkiä','Password must be at least 6 characters'=>'Salasanan on oltava vähintään 6 merkkiä',
+ 'Nickname already taken'=>'Nimimerkki on jo käytössä','Wrong nickname or password'=>'Väärä nimimerkki tai salasana',
+ 'Browse word packs'=>'Selaa sanapaketteja','Search title or description'=>'Hae otsikosta tai kuvauksesta','Tag (e.g. spanish, high school)'=>'Tagi (esim. espanja, lukio)',
+ 'Search'=>'Hae','cards'=>'korttia','by'=>'tekijä','Edit'=>'Muokkaa','No packs found.'=>'Paketteja ei löytynyt.',
+ 'Edit pack'=>'Muokkaa pakettia','New pack'=>'Uusi paketti','Title'=>'Otsikko','e.g. Food and drinks'=>'esim. Ruoka ja juoma','Description'=>'Kuvaus','(optional)'=>'(valinnainen)',
+ 'What is this pack about?'=>'Mistä paketti kertoo?','Language 1'=>'Kieli 1','Language 2'=>'Kieli 2','e.g. English'=>'esim. English','e.g. Spanish'=>'esim. Spanish',
+ 'Tags'=>'Tagit','(comma separated)'=>'(pilkulla erotettuna)','e.g. spanish, english, high school, food'=>'esim. espanja, englanti, lukio, ruoka',
+ 'Cards'=>'Kortit','Bulk paste'=>'Liitä useita','Several accepted answers? Separate them with “/” (e.g.'=>'Useita hyväksyttyjä vastauksia? Erota ne merkillä “/” (esim.',
+ '+ Add card'=>'+ Lisää kortti','Remove card'=>'Poista kortti','Save pack'=>'Tallenna paketti','Save'=>'Tallenna','Delete'=>'Poista','Delete this pack?'=>'Poistetaanko tämä paketti?',
+ 'One pair per line, separated by a tab, “;” or “ - ”.'=>'Yksi pari per rivi, erotettuna sarkaimella, “;” tai “ - ”.','Cancel'=>'Peruuta','Add cards'=>'Lisää kortit',
+ 'Title, both languages and at least one full card are required'=>'Otsikko, molemmat kielet ja vähintään yksi täysi kortti vaaditaan',
+ 'Pack not found'=>'Pakettia ei löytynyt','Flashcards'=>'Muistikortit','Write'=>'Kirjoita','Multiple choice'=>'Monivalinta','Showing:'=>'Näytetään:','Shuffle:'=>'Sekoita:',
+ 'on'=>'päällä','off'=>'pois','Done! %d / %d correct'=>'Valmis! %d / %d oikein','Practice %d missed'=>'Harjoittele %d väärin mennyttä','Restart'=>'Aloita alusta',
+ 'Flip'=>'Käännä','Write in %s'=>'Kirjoita kielellä %s','Check'=>'Tarkista','✓ Correct!'=>'✓ Oikein!','≈ Almost! Small spelling mistake.'=>'≈ Melkein! Pieni kirjoitusvirhe.',
+ '✗ Not quite.'=>'✗ Ei aivan.','You wrote:'=>'Kirjoitit:','Correct:'=>'Oikein:','Next'=>'Seuraava',
+ 'Add more cards with different answers to use multiple choice.'=>'Lisää kortteja eri vastauksilla käyttääksesi monivalintaa.',
+]; }

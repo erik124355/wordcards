@@ -9,22 +9,23 @@ else {
     if ($tag !== '') { $sql .= " AND CONCAT(',',l.tags,',') LIKE ?"; $p[] = "%,$tag,%"; }
 }
 $s = db()->prepare($sql . ' ORDER BY l.created_at DESC LIMIT 100'); $s->execute($p); $lists = $s->fetchAll();
-page_head($mine ? 'My packs' : 'Browse'); ?>
-<h2><?= $mine ? 'My packs' : 'Browse word packs' ?></h2>
+page_head($mine ? t('My packs') : t('Browse')); ?>
+<h2><?= $mine ? e('My packs') : e('Browse word packs') ?></h2>
 <?php if (!$mine): ?>
 <form class="row" method="get">
-  <input name="q" value="<?= h($q) ?>" placeholder="Search title or description">
-  <input name="tag" value="<?= h($tag) ?>" placeholder="Tag (e.g. spanish, high school)"><button class="btn">Search</button>
+  <input name="q" value="<?= h($q) ?>" placeholder="<?= e('Search title or description') ?>">
+  <input name="tag" value="<?= h($tag) ?>" placeholder="<?= e('Tag (e.g. spanish, high school)') ?>"><button class="btn"><?= e('Search') ?></button>
 </form>
 <?php endif; ?>
 <div class="grid">
 <?php foreach ($lists as $l): ?>
   <div class="card pack">
     <a href="study.php?id=<?= $l['id'] ?>"><b><?= h($l['title']) ?></b></a>
-    <small class="muted"><?= h($l['lang_a']) ?> ⇄ <?= h($l['lang_b']) ?> · <?= $l['wc'] ?> cards · by <?= h($l['nickname']) ?></small>
+    <small class="muted"><?= h($l['lang_a']) ?> ⇄ <?= h($l['lang_b']) ?> · <?= $l['wc'] ?> <?= e('cards') ?> · <?= e('by') ?> <?= h($l['nickname']) ?></small>
+    <?php if (trim($l['description'])): ?><p class="desc"><?= h($l['description']) ?></p><?php endif; ?>
     <span><?php foreach (array_filter(explode(',', $l['tags'])) as $t): ?><a class="tag" href="index.php?tag=<?= urlencode($t) ?>"><?= h($t) ?></a><?php endforeach; ?></span>
-    <?php if ($mine): ?><a class="muted" href="edit.php?id=<?= $l['id'] ?>">Edit</a><?php endif; ?>
+    <?php if ($mine): ?><a class="chip" href="edit.php?id=<?= $l['id'] ?>">✎ <?= e('Edit') ?></a><?php endif; ?>
   </div>
 <?php endforeach; ?>
 </div>
-<?php if (!$lists): ?><p class="muted">No packs found.</p><?php endif; page_foot();
+<?php if (!$lists): ?><p class="muted"><?= e('No packs found.') ?></p><?php endif; page_foot();
