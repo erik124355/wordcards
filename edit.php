@@ -50,7 +50,6 @@ page_head($id ? t('Edit pack') : t('New pack')); ?>
     <datalist id="langs"><?php foreach (language_list() as $l): ?><option value="<?= h($l) ?>"><?php endforeach; ?></datalist>
   </div>
   <div class="card"><div class="row between"><h3><?= e('Cards') ?></h3><button type="button" class="chip" id="bulkbtn">⇪ <?= e('Bulk paste') ?></button></div>
-    <p class="muted"><?= e('Several accepted answers? Separate them with “/” (e.g.') ?> <code>house / building</code>).</p>
     <div id="rows">
     <?php foreach ($terms as $i => $t): ?>
       <div class="row"><input class="t-a" name="term[]" value="<?= h($t) ?>"><input class="t-b" name="def[]" value="<?= h($defs[$i] ?? '') ?>">
