@@ -1,4 +1,5 @@
 <?php require 'config.php'; require 'header.php';
+$isAjax = strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest';
 $id = (int)($_GET['id'] ?? 0);
 $s = db()->prepare('SELECT l.*, u.nickname FROM words_lists l JOIN words_users u ON u.id=l.user_id WHERE l.id=?'); $s->execute([$id]); $list = $s->fetch();
 if (!$list) { http_response_code(404); exit(t('Pack not found')); }
@@ -22,7 +23,10 @@ $ask = fn($w) => $front === 'a' ? $w['term'] : $w['definition'];
 $ans = fn($w) => $front === 'a' ? $w['definition'] : $w['term'];
 $langFront = lang_name($front === 'a' ? $list['lang_a'] : $list['lang_b']); $langBack = lang_name($front === 'a' ? $list['lang_b'] : $list['lang_a']);
 
-if (isset($_GET['go'])) { $S['i'] = max(0, min($n - 1, $S['i'] + ($_GET['go'] === 'next' ? 1 : -1))); go("study.php?id=$id"); }
+if (isset($_GET['go'])) {
+    $S['i'] = max(0, min($n - 1, $S['i'] + ($_GET['go'] === 'next' ? 1 : -1)));
+    if (!$isAjax) go("study.php?id=$id");
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $w = $words[$S['deck'][$S['i']] ?? -1] ?? null; $a = $_POST['action'] ?? '';
     if ($a === 'check' && $w && !$S['res']) { [$g, $b] = grade($_POST['answer'] ?? '', $ans($w)); $S['res'] = ['g' => $g, 'best' => $b, 'in' => trim($_POST['answer'] ?? '')]; }
@@ -33,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($S['res']['g'] === 'wrong') $S['missed'][] = $S['deck'][$S['i']]; else $S['score']++;
         $S['res'] = null; $S['i']++;
     }
-    go("study.php?id=$id");
+    if (!$isAjax) go("study.php?id=$id");
 }
 $done = $S['i'] >= $n; $cur = $done ? null : $words[$S['deck'][$S['i']]]; $res = $S['res'];
 if ($mode === 'choice' && !$done && $S['oi'] !== $S['i']) {   // 1 correct + up to 3 wrong options per question
@@ -43,7 +47,8 @@ if ($mode === 'choice' && !$done && $S['oi'] !== $S['i']) {   // 1 correct + up 
     $S['opts'] = $opts; $S['oi'] = $S['i'];
 }
 $base = "study.php?id=$id";
-page_head($list['title']); ?>
+if (!$isAjax) {
+    page_head($list['title']); ?>
 <div class="row between"><h2><?= h($list['title']) ?></h2>
   <?php if (user() == $list['user_id']): ?><a class="chip" href="edit.php?id=<?= $id ?>">✎ <?= e('Edit') ?></a><?php endif; ?></div>
 <p class="muted"><?= h(lang_name($list['lang_a'])) ?> ⇄ <?= h(lang_name($list['lang_b'])) ?> · <?= e('by') ?> <?= h($list['nickname']) ?></p>
@@ -57,7 +62,9 @@ page_head($list['title']); ?>
   <a class="chip" href="<?= $base ?>&front=<?= $front === 'a' ? 'b' : 'a' ?>">⇄ <?= e('Showing:') ?> <?= h($langFront) ?></a>
   <a class="chip" href="<?= $base ?>&shuf=<?= $S['shuf'] === '1' ? '0' : '1' ?>"><?= e('Shuffle:') ?> <?= $S['shuf'] === '1' ? e('on') : e('off') ?></a>
 </div>
+<?php } ?>
 
+<div id="exercise-area">
 <?php if ($done): ?>
   <div class="card center"><h3><?= e('Done! %d / %d correct', $S['score'], $n) ?></h3>
     <div class="row center"><?php if ($S['missed']): ?><a class="btn" href="<?= $base ?>&start=missed"><?= e('Practice %d missed', count($S['missed'])) ?></a><?php endif; ?>
@@ -74,7 +81,7 @@ page_head($list['title']); ?>
 
 <?php elseif ($mode === 'write'): ?>
   <p class="muted center"><?= $S['i'] + 1 ?> / <?= $n ?></p>
-  <form method="post" class="card center"><?= csrf_field() ?>
+  <form method="post" action="<?= h($base) ?>" class="card center exercise-form"><?= csrf_field() ?>
     <small><?= h($langFront) ?></small><div class="big"><?= h($ask($cur)) ?></div>
     <?php if (!$res): ?>
       <input id="answer" name="answer" placeholder="<?= e('Write your answer (%s)', $langBack) ?>" autofocus autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -95,7 +102,7 @@ page_head($list['title']); ?>
 
 <?php else: ?>
   <p class="muted center"><?= $S['i'] + 1 ?> / <?= $n ?></p>
-  <form method="post" class="card center"><?= csrf_field() ?>
+  <form method="post" action="<?= h($base) ?>" class="card center exercise-form"><?= csrf_field() ?>
     <small><?= h($langFront) ?></small><div class="big"><?= h($ask($cur)) ?></div>
     <?php if (count($S['opts']) < 2): ?><p class="muted"><?= e('Add more cards with different answers to use multiple choice.') ?></p><?php else: ?>
     <div class="opts"><?php foreach ($S['opts'] as $k => $o):
@@ -104,6 +111,62 @@ page_head($list['title']); ?>
     <?php endforeach; ?></div>
     <?php if ($res): ?><p class="<?= $res['g'] ?>"><?= $res['g'] === 'correct' ? e('✓ Correct!') : e('✗ Not quite.') ?></p>
       <button class="btn" name="action" value="next" autofocus><?= e('Next') ?></button>
-    <?php else: ?><script>addEventListener('keydown',e=>{const b=document.querySelectorAll('.opt')[+e.key-1];if(b)b.click()})</script><?php endif; endif; ?>
+    <?php endif; endif; ?>
   </form>
-<?php endif; page_foot();
+<?php endif; ?>
+ </div>
+<?php if (!$isAjax): ?>
+<p id="study-error" class="alert" role="alert" hidden></p>
+<script>
+const exerciseArea = document.getElementById('exercise-area');
+const studyError = document.getElementById('study-error');
+let updatingExercise = false;
+
+async function updateExercise(url, options = {}) {
+  if (updatingExercise) return;
+  updatingExercise = true;
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: { ...(options.headers || {}), 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!response.ok) throw new Error(`Request failed (${response.status}) at ${response.url}.`);
+    const html = await response.text();
+    const nextArea = new DOMParser().parseFromString(html, 'text/html').getElementById('exercise-area');
+    if (!nextArea) throw new Error('The server returned an invalid exercise response.');
+    exerciseArea.innerHTML = nextArea.innerHTML;
+    studyError.hidden = true;
+    const autofocus = exerciseArea.querySelector('[autofocus]');
+    if (autofocus) autofocus.focus({ preventScroll: true });
+  } catch (error) {
+    studyError.textContent = `Could not update the exercise. ${error.message}`;
+    studyError.hidden = false;
+  } finally {
+    updatingExercise = false;
+  }
+}
+
+document.addEventListener('submit', event => {
+  const form = event.target.closest('#exercise-area form.exercise-form');
+  if (!form) return;
+  event.preventDefault();
+  const data = new FormData(form);
+  if (event.submitter && event.submitter.name) data.append(event.submitter.name, event.submitter.value);
+  updateExercise(form.getAttribute('action') || window.location.href, { method: 'POST', body: data });
+});
+
+document.addEventListener('click', event => {
+  const link = event.target.closest('#exercise-area a[href*="go="]');
+  if (link) {
+    event.preventDefault();
+    updateExercise(link.href);
+  }
+});
+
+document.addEventListener('keydown', event => {
+  if (!/^[1-4]$/.test(event.key) || event.target.matches('input, textarea, select')) return;
+  const option = exerciseArea.querySelectorAll('.opt:not(:disabled)')[Number(event.key) - 1];
+  if (option) option.click();
+});
+</script>
+<?php page_foot(); endif;

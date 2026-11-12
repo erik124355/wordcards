@@ -32,6 +32,7 @@ The interface is available in **Finnish (default)** and **English**.
 - **Multiple choice:** pick the correct answer from four options (number keys 1 to 4 work).
 - Switch which language is shown and which one you answer in with one button.
 - Shuffle on or off, and a "practice missed words" round at the end.
+- Answer submissions and flashcard previous/next actions use AJAX to update only the exercise area, avoiding a full page reload. Study progress remains managed by PHP in the session; if JavaScript is unavailable, the forms and links still work with regular page loads.
 
 ## Requirements
 
