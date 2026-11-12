@@ -20,7 +20,7 @@ if ($touch || empty($S['deck'])) {
 $mode = $S['mode']; $front = $S['front']; $n = count($S['deck']);
 $ask = fn($w) => $front === 'a' ? $w['term'] : $w['definition'];
 $ans = fn($w) => $front === 'a' ? $w['definition'] : $w['term'];
-$langFront = $front === 'a' ? $list['lang_a'] : $list['lang_b']; $langBack = $front === 'a' ? $list['lang_b'] : $list['lang_a'];
+$langFront = lang_name($front === 'a' ? $list['lang_a'] : $list['lang_b']); $langBack = lang_name($front === 'a' ? $list['lang_b'] : $list['lang_a']);
 
 if (isset($_GET['go'])) { $S['i'] = max(0, min($n - 1, $S['i'] + ($_GET['go'] === 'next' ? 1 : -1))); go("study.php?id=$id"); }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,7 +46,7 @@ $base = "study.php?id=$id";
 page_head($list['title']); ?>
 <div class="row between"><h2><?= h($list['title']) ?></h2>
   <?php if (user() == $list['user_id']): ?><a class="chip" href="edit.php?id=<?= $id ?>">✎ <?= e('Edit') ?></a><?php endif; ?></div>
-<p class="muted"><?= h($list['lang_a']) ?> ⇄ <?= h($list['lang_b']) ?> · <?= e('by') ?> <?= h($list['nickname']) ?></p>
+<p class="muted"><?= h(lang_name($list['lang_a'])) ?> ⇄ <?= h(lang_name($list['lang_b'])) ?> · <?= e('by') ?> <?= h($list['nickname']) ?></p>
 <?php if (trim($list['description'])): ?><p class="desc"><?= nl2br(h($list['description'])) ?></p><?php endif; ?>
 <div class="bar">
   <div class="seg">
@@ -77,7 +77,7 @@ page_head($list['title']); ?>
   <form method="post" class="card center"><?= csrf_field() ?>
     <small><?= h($langFront) ?></small><div class="big"><?= h($ask($cur)) ?></div>
     <?php if (!$res): ?>
-      <input id="answer" name="answer" placeholder="<?= e('Write in %s', $langBack) ?>" autofocus autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input id="answer" name="answer" placeholder="<?= e('Write your answer (%s)', $langBack) ?>" autofocus autocomplete="off" autocapitalize="off" spellcheck="false">
       <div class="row center"><?php foreach (['ä','ö','å','é','è','ñ','ü','ß','ç','¿','¡'] as $c): ?>
         <button type="button" class="chip ch" onclick="var a=document.getElementById('answer');a.value+='<?= $c ?>';a.focus()"><?= $c ?></button><?php endforeach; ?></div>
       <button class="btn" name="action" value="check"><?= e('Check') ?></button>

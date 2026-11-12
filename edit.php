@@ -43,13 +43,14 @@ page_head($id ? t('Edit pack') : t('New pack')); ?>
     <label><?= e('Title') ?><input name="title" value="<?= h($f['title']) ?>" placeholder="<?= e('e.g. Food and drinks') ?>"></label>
     <label><?= e('Description') ?> <span class="muted"><?= e('(optional)') ?></span><input name="description" value="<?= h($f['description']) ?>" placeholder="<?= e('What is this pack about?') ?>"></label>
     <div class="row two">
-      <label><?= e('Language 1') ?><input class="lang" name="lang_a" list="langs" value="<?= h($f['lang_a']) ?>" placeholder="<?= e('e.g. English') ?>" autocomplete="off"></label>
-      <label><?= e('Language 2') ?><input class="lang" name="lang_b" list="langs" value="<?= h($f['lang_b']) ?>" placeholder="<?= e('e.g. Spanish') ?>" autocomplete="off"></label>
+      <label><?= e('Language 1') ?><input class="lang" name="lang_a" list="langs" value="<?= h(lang_name($f['lang_a'])) ?>" placeholder="<?= e('e.g. English') ?>" autocomplete="off"></label>
+      <label><?= e('Language 2') ?><input class="lang" name="lang_b" list="langs" value="<?= h(lang_name($f['lang_b'])) ?>" placeholder="<?= e('e.g. Spanish') ?>" autocomplete="off"></label>
     </div>
     <label><?= e('Tags') ?> <span class="muted"><?= e('(comma separated)') ?></span><input name="tags" value="<?= h($f['tags']) ?>" placeholder="<?= e('e.g. spanish, english, high school, food') ?>"></label>
-    <datalist id="langs"><?php foreach (language_list() as $l): ?><option value="<?= h($l) ?>"><?php endforeach; ?></datalist>
+    <datalist id="langs"><?php foreach (language_list() as $l): ?><option value="<?= h(lang_name($l)) ?>"><?php endforeach; ?></datalist>
   </div>
   <div class="card"><div class="row between"><h3><?= e('Cards') ?></h3><button type="button" class="chip" id="bulkbtn">⇪ <?= e('Bulk paste') ?></button></div>
+    <p class="muted"><?= e('Several accepted answers? Separate them with “/” (e.g.') ?> <code>house / building</code>).</p>
     <div id="rows">
     <?php foreach ($terms as $i => $t): ?>
       <div class="row"><input class="t-a" name="term[]" value="<?= h($t) ?>"><input class="t-b" name="def[]" value="<?= h($defs[$i] ?? '') ?>">
@@ -71,7 +72,7 @@ page_head($id ? t('Edit pack') : t('New pack')); ?>
 
 <script>
 const PH = [<?= json_encode(t('Language 1'), JSON_UNESCAPED_UNICODE) ?>, <?= json_encode(t('Language 2'), JSON_UNESCAPED_UNICODE) ?>];
-const LANGS = <?= json_encode(language_list(), JSON_UNESCAPED_UNICODE) ?>;
+const LANGS = <?= json_encode(array_map(fn($c) => [$c, lang_name($c), lang_fi()[$c] ?? $c], language_list()), JSON_UNESCAPED_UNICODE) ?>; // [english, shown, finnish]
 let dirty = <?= $err ? 'true' : 'false' ?>;
 const rows = document.getElementById('rows'), form = document.getElementById('editform');
 const la = form.elements.lang_a, lb = form.elements.lang_b;
@@ -81,10 +82,12 @@ function lev(a, b) { const d = Array.from({length: a.length + 1}, (_, i) => [i, 
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
     d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
   return d[a.length][b.length]; }
-function snap(s) { s = s.trim().replace(/\s+/g, ' '); const v = s.toLowerCase(); if (!v) return '';
-  const ex = LANGS.find(l => l.toLowerCase() === v); if (ex) return ex;
-  if (v.length >= 2) { const m = LANGS.filter(l => l.toLowerCase().startsWith(v)); if (m.length === 1) return m[0]; }
-  if (v.length >= 4) { let best = '', bd = 99; for (const l of LANGS) { const d = lev(l.toLowerCase(), v); if (d < bd) { bd = d; best = l; } } if (bd <= 2) return best; }
+function snap(s) { // matches English or Finnish names (typos ok) and returns the name in the current interface language
+  s = s.trim().replace(/\s+/g, ' '); const v = s.toLowerCase(); if (!v) return '';
+  const keys = l => [l[0].toLowerCase(), l[2].toLowerCase()];
+  const ex = LANGS.find(l => keys(l).includes(v)); if (ex) return ex[1];
+  if (v.length >= 2) { const m = LANGS.filter(l => keys(l).some(k => k.startsWith(v))); if (m.length === 1) return m[0][1]; }
+  if (v.length >= 4) { let best = '', bd = 99; for (const l of LANGS) for (const k of keys(l)) { const d = lev(k, v); if (d < bd) { bd = d; best = l[1]; } } if (bd <= 2) return best; }
   return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function placeholders() { // card placeholders follow the language fields live

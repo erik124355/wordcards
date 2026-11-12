@@ -21,7 +21,7 @@ page_head($mine ? t('My packs') : t('Browse')); ?>
 <?php foreach ($lists as $l): ?>
   <div class="card pack">
     <a href="study.php?id=<?= $l['id'] ?>"><b><?= h($l['title']) ?></b></a>
-    <small class="muted"><?= h($l['lang_a']) ?> ⇄ <?= h($l['lang_b']) ?> · <?= $l['wc'] ?> <?= e('cards') ?> · <?= e('by') ?> <?= h($l['nickname']) ?></small>
+    <small class="muted"><?= h(lang_name($l['lang_a'])) ?> ⇄ <?= h(lang_name($l['lang_b'])) ?> · <?= $l['wc'] ?> <?= e('cards') ?> · <?= e('by') ?> <?= h($l['nickname']) ?></small>
     <?php if (trim($l['description'])): ?><p class="desc"><?= h($l['description']) ?></p><?php endif; ?>
     <span><?php foreach (array_filter(explode(',', $l['tags'])) as $t): ?><a class="tag" href="index.php?tag=<?= urlencode($t) ?>"><?= h($t) ?></a><?php endforeach; ?></span>
     <?php if ($mine): ?><a class="chip" href="edit.php?id=<?= $l['id'] ?>">✎ <?= e('Edit') ?></a><?php endif; ?>

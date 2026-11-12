@@ -97,17 +97,28 @@ function language_list() {
         'Vietnamese','Indonesian','Malay','Filipino','Chinese','Japanese','Korean','Mongolian','Swahili','Somali','Afrikaans','Kurdish',
         'Armenian','Georgian','Latin','Irish','Welsh','Catalan','Basque','Sami','Esperanto'];
 }
+function lang_fi() { return ['English'=>'Englanti','Finnish'=>'Suomi','Swedish'=>'Ruotsi','Spanish'=>'Espanja','French'=>'Ranska','German'=>'Saksa','Italian'=>'Italia','Portuguese'=>'Portugali',
+    'Dutch'=>'Hollanti','Norwegian'=>'Norja','Danish'=>'Tanska','Icelandic'=>'Islanti','Estonian'=>'Viro','Latvian'=>'Latvia','Lithuanian'=>'Liettua','Polish'=>'Puola','Czech'=>'Tšekki',
+    'Slovak'=>'Slovakki','Hungarian'=>'Unkari','Romanian'=>'Romania','Bulgarian'=>'Bulgaria','Greek'=>'Kreikka','Turkish'=>'Turkki','Russian'=>'Venäjä','Ukrainian'=>'Ukraina',
+    'Serbian'=>'Serbia','Croatian'=>'Kroatia','Slovenian'=>'Sloveeni','Albanian'=>'Albania','Arabic'=>'Arabia','Hebrew'=>'Heprea','Persian'=>'Persia','Hindi'=>'Hindi','Bengali'=>'Bengali',
+    'Urdu'=>'Urdu','Tamil'=>'Tamili','Telugu'=>'Telugu','Nepali'=>'Nepali','Thai'=>'Thai','Vietnamese'=>'Vietnam','Indonesian'=>'Indonesia','Malay'=>'Malaiji','Filipino'=>'Filipino',
+    'Chinese'=>'Kiina','Japanese'=>'Japani','Korean'=>'Korea','Mongolian'=>'Mongoli','Swahili'=>'Swahili','Somali'=>'Somali','Afrikaans'=>'Afrikaans','Kurdish'=>'Kurdi',
+    'Armenian'=>'Armenia','Georgian'=>'Gruusia','Latin'=>'Latina','Irish'=>'Iiri','Welsh'=>'Kymri','Catalan'=>'Katalaani','Basque'=>'Baski','Sami'=>'Saame','Esperanto'=>'Esperanto']; }
+// Database always stores the English name; the site shows it in the interface language.
+function lang_name($c) { return ui() === 'fi' ? (lang_fi()[$c] ?? $c) : $c; }
+// Accepts English or Finnish names (typos allowed) and returns the English name, or the typed text if unknown.
 function snap_language($s) {
     $s = trim(preg_replace('/\s+/u', ' ', $s)); if ($s === '') return '';
-    $v = mb_strtolower($s); $L = language_list();
-    foreach ($L as $l) if (mb_strtolower($l) === $v) return $l;
+    $v = mb_strtolower($s); $fi = lang_fi(); $names = [];
+    foreach (language_list() as $c) $names[$c] = [mb_strtolower($c), mb_strtolower($fi[$c] ?? $c)];
+    foreach ($names as $c => $n) if ($v === $n[0] || $v === $n[1]) return $c;
     if (mb_strlen($v) >= 2) {
-        $m = array_values(array_filter($L, fn($l) => mb_strpos(mb_strtolower($l), $v) === 0));
+        $m = []; foreach ($names as $c => $n) if (mb_strpos($n[0], $v) === 0 || mb_strpos($n[1], $v) === 0) $m[] = $c;
         if (count($m) === 1) return $m[0];
     }
     if (mb_strlen($v) >= 4) {
         $best = null; $bd = 99;
-        foreach ($L as $l) { $d = lev(mb_strtolower($l), $v); if ($d < $bd) { $bd = $d; $best = $l; } }
+        foreach ($names as $c => $n) foreach ($n as $x) { $d = lev($x, $v); if ($d < $bd) { $bd = $d; $best = $c; } }
         if ($bd <= 2) return $best;
     }
     return mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
@@ -133,7 +144,7 @@ function fi_dict() { return [
  'Browse word packs'=>'Selaa sanapaketteja','Search title or description'=>'Hae otsikosta tai kuvauksesta','Tag (e.g. spanish, high school)'=>'Tagi (esim. espanja, lukio)',
  'Search'=>'Hae','cards'=>'korttia','by'=>'tekijä','Edit'=>'Muokkaa','No packs found.'=>'Paketteja ei löytynyt.',
  'Edit pack'=>'Muokkaa pakettia','New pack'=>'Uusi paketti','Title'=>'Otsikko','e.g. Food and drinks'=>'esim. Ruoka ja juoma','Description'=>'Kuvaus','(optional)'=>'(valinnainen)',
- 'What is this pack about?'=>'Mistä paketti kertoo?','Language 1'=>'Kieli 1','Language 2'=>'Kieli 2','e.g. English'=>'esim. English','e.g. Spanish'=>'esim. Spanish',
+ 'What is this pack about?'=>'Mistä paketti kertoo?','Language 1'=>'Kieli 1','Language 2'=>'Kieli 2','e.g. English'=>'esim. Englanti','e.g. Spanish'=>'esim. Espanja',
  'Tags'=>'Tagit','(comma separated)'=>'(pilkulla erotettuna)','e.g. spanish, english, high school, food'=>'esim. espanja, englanti, lukio, ruoka',
  'Cards'=>'Kortit','Bulk paste'=>'Liitä useita','Several accepted answers? Separate them with “/” (e.g.'=>'Useita hyväksyttyjä vastauksia? Erota ne merkillä “/” (esim.',
  '+ Add card'=>'+ Lisää kortti','Remove card'=>'Poista kortti','Save pack'=>'Tallenna paketti','Save'=>'Tallenna','Delete'=>'Poista','Delete this pack?'=>'Poistetaanko tämä paketti?',
@@ -141,7 +152,7 @@ function fi_dict() { return [
  'Title, both languages and at least one full card are required'=>'Otsikko, molemmat kielet ja vähintään yksi täysi kortti vaaditaan',
  'Pack not found'=>'Pakettia ei löytynyt','Flashcards'=>'Muistikortit','Write'=>'Kirjoita','Multiple choice'=>'Monivalinta','Showing:'=>'Näytetään:','Shuffle:'=>'Sekoita:',
  'on'=>'päällä','off'=>'pois','Done! %d / %d correct'=>'Valmis! %d / %d oikein','Practice %d missed'=>'Harjoittele %d väärin mennyttä','Restart'=>'Aloita alusta',
- 'Flip'=>'Käännä','Write in %s'=>'Kirjoita kielellä %s','Check'=>'Tarkista','✓ Correct!'=>'✓ Oikein!','≈ Almost! Small spelling mistake.'=>'≈ Melkein! Pieni kirjoitusvirhe.',
+ 'Flip'=>'Käännä','Write your answer (%s)'=>'Kirjoita vastauksesi (%s)','Check'=>'Tarkista','✓ Correct!'=>'✓ Oikein!','≈ Almost! Small spelling mistake.'=>'≈ Melkein! Pieni kirjoitusvirhe.',
  '✗ Not quite.'=>'✗ Ei aivan.','You wrote:'=>'Kirjoitit:','Correct:'=>'Oikein:','Next'=>'Seuraava',
  'Add more cards with different answers to use multiple choice.'=>'Lisää kortteja eri vastauksilla käyttääksesi monivalintaa.',
 ]; }
