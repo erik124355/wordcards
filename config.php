@@ -1,6 +1,6 @@
 <?php
 // ---- Edit these to match your MySQL / phpMyAdmin setup ----
-const DB_HOST = 'localhost', DB_NAME = 'wordcards', DB_USER = 'root', DB_PASS = '';
+const DB_HOST = 'localhost', DB_NAME = '213601', DB_USER = 'root', DB_PASS = '';
 // -----------------------------------------------------------
 session_start();
 function db() {
