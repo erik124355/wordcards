@@ -18,12 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 $signup = $mode === 'signup'; page_head($signup ? 'Sign up' : 'Log in'); ?>
-<form method="post" class="card narrow"><?= csrf_field() ?><input type="hidden" name="mode" value="<?= $signup ? 'signup' : 'login' ?>">
-  <h2><?= $signup ? 'Create account' : 'Log in' ?></h2>
-  <input name="nickname" placeholder="Nickname" value="<?= h($_POST['nickname'] ?? '') ?>" required>
-  <input name="password" type="password" placeholder="Password" required>
-  <?php if ($err): ?><p class="bad"><?= h($err) ?></p><?php endif; ?>
-  <button class="btn"><?= $signup ? 'Sign up' : 'Log in' ?></button>
-  <p class="muted">No email or phone number needed.</p>
-</form>
+<div class="auth"><form method="post" class="card auth-card"><?= csrf_field() ?><input type="hidden" name="mode" value="<?= $signup ? 'signup' : 'login' ?>">
+  <h2><?= $signup ? 'Create your account' : 'Welcome back' ?></h2>
+  <p class="muted"><?= $signup ? 'Just a nickname and a password, nothing else.' : 'Log in to create and edit your own packs.' ?></p>
+  <label>Nickname<input name="nickname" value="<?= h($_POST['nickname'] ?? '') ?>" autocomplete="username" required autofocus></label>
+  <label>Password<input name="password" type="password" autocomplete="<?= $signup ? 'new-password' : 'current-password' ?>" required></label>
+  <?php if ($err): ?><p class="alert"><?= h($err) ?></p><?php endif; ?>
+  <button class="btn wide"><?= $signup ? 'Sign up' : 'Log in' ?></button>
+  <p class="switch muted"><?= $signup ? 'Already have an account? <a href="auth.php?mode=login">Log in</a>' : 'New here? <a href="auth.php?mode=signup">Create an account</a>' ?></p>
+</form></div>
 <?php page_foot();

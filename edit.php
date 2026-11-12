@@ -1,7 +1,7 @@
 <?php require 'config.php'; require 'header.php'; require_login();
 $id = (int)($_GET['id'] ?? 0); $err = '';
-$f = ['title' => '', 'description' => '', 'lang_a' => 'Finnish', 'lang_b' => 'Swedish', 'tags' => ''];
-$terms = $defs = []; $bulk = '';
+$f = ['title' => '', 'description' => '', 'lang_a' => '', 'lang_b' => '', 'tags' => ''];
+$terms = $defs = [];
 if ($id) {
     $s = db()->prepare('SELECT * FROM words_lists WHERE id=?'); $s->execute([$id]); $l = $s->fetch();
     if (!$l || $l['user_id'] != user()) { http_response_code(403); exit('Not allowed'); }
@@ -14,18 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     }
 } else {
     foreach ($f as $k => $_) $f[$k] = trim($_POST[$k] ?? '');
-    $terms = array_values($_POST['term'] ?? []); $defs = array_values($_POST['def'] ?? []); $bulk = $_POST['bulk'] ?? '';
+    $f['lang_a'] = snap_language($f['lang_a']); $f['lang_b'] = snap_language($f['lang_b']);
+    $terms = array_values($_POST['term'] ?? []); $defs = array_values($_POST['def'] ?? []);
     $a = $_POST['action'] ?? '';
-    if (isset($_POST['remove'])) { array_splice($terms, (int)$_POST['remove'], 1); array_splice($defs, (int)$_POST['remove'], 1); }
-    elseif ($a === 'addrow') { for ($i = 0; $i < 5; $i++) { $terms[] = ''; $defs[] = ''; } }
-    elseif ($a === 'bulk') { // one pair per line: tab, ";" or " - "
-        foreach (preg_split('/\R/', $bulk) as $line) {
-            $p = preg_split('/\t|;| - /', $line, 2);
-            if (count($p) == 2 && trim($p[0]) !== '') { $terms[] = trim($p[0]); $defs[] = trim($p[1]); }
-        }
-        $bulk = '';
-    }
-    elseif ($a === 'delete' && $id) { db()->prepare('DELETE FROM words_lists WHERE id=? AND user_id=?')->execute([$id, user()]); go('index.php?mine=1'); }
+    if ($a === 'delete' && $id) { db()->prepare('DELETE FROM words_lists WHERE id=? AND user_id=?')->execute([$id, user()]); go('index.php?mine=1'); }
     elseif ($a === 'save') {
         $words = [];
         foreach ($terms as $i => $t) if (trim($t) !== '' && trim($defs[$i] ?? '') !== '') $words[] = [mb_substr(trim($t), 0, 200), mb_substr(trim($defs[$i]), 0, 200)];
@@ -42,33 +34,84 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         }
     }
 }
-while (count($terms) < 5) { $terms[] = ''; $defs[] = ''; }
+while (count($terms) < 3) { $terms[] = ''; $defs[] = ''; }
 page_head($id ? 'Edit pack' : 'New pack'); ?>
 <h2><?= $id ? 'Edit pack' : 'New pack' ?></h2>
-<form method="post"><?= csrf_field() ?>
+<form method="post" id="editform"><?= csrf_field() ?>
   <button name="action" value="save" class="hidden" tabindex="-1">Save</button>
   <div class="card">
-    <input name="title" value="<?= h($f['title']) ?>" placeholder="Title">
-    <input name="description" value="<?= h($f['description']) ?>" placeholder="Description (optional)">
-    <div class="row"><input name="lang_a" value="<?= h($f['lang_a']) ?>" placeholder="Language 1"><input name="lang_b" value="<?= h($f['lang_b']) ?>" placeholder="Language 2"></div>
-    <input name="tags" value="<?= h($f['tags']) ?>" placeholder="Tags, comma separated (e.g. finnish, swedish, high school, food)">
+    <label>Title<input name="title" value="<?= h($f['title']) ?>" placeholder="e.g. Food and drinks"></label>
+    <label>Description <span class="muted">(optional)</span><input name="description" value="<?= h($f['description']) ?>" placeholder="What is this pack about?"></label>
+    <div class="row two">
+      <label>Language 1<input class="lang" name="lang_a" list="langs" value="<?= h($f['lang_a']) ?>" placeholder="e.g. English" autocomplete="off"></label>
+      <label>Language 2<input class="lang" name="lang_b" list="langs" value="<?= h($f['lang_b']) ?>" placeholder="e.g. Spanish" autocomplete="off"></label>
+    </div>
+    <label>Tags <span class="muted">(comma separated)</span><input name="tags" value="<?= h($f['tags']) ?>" placeholder="e.g. spanish, english, high school, food"></label>
+    <datalist id="langs"><?php foreach (language_list() as $l): ?><option value="<?= h($l) ?>"><?php endforeach; ?></datalist>
   </div>
-  <div class="card"><h3>Cards</h3>
-    <p class="muted">Several accepted answers? Separate with “/” (e.g. <code>hus / byggnad</code>).</p>
+  <div class="card"><div class="row between"><h3>Cards</h3><button type="button" class="chip" id="bulkbtn">⇪ Bulk paste</button></div>
+    <p class="muted">Several accepted answers? Separate them with “/” (e.g. <code>house / building</code>).</p>
+    <div id="rows">
     <?php foreach ($terms as $i => $t): ?>
-    <div class="row"><input name="term[]" value="<?= h($t) ?>" placeholder="<?= h($f['lang_a'] ?: 'Language 1') ?>">
-      <input name="def[]" value="<?= h($defs[$i] ?? '') ?>" placeholder="<?= h($f['lang_b'] ?: 'Language 2') ?>">
-      <button class="ghost" name="remove" value="<?= $i ?>" title="Remove">✕</button></div>
+      <div class="row"><input class="t-a" name="term[]" value="<?= h($t) ?>"><input class="t-b" name="def[]" value="<?= h($defs[$i] ?? '') ?>">
+        <button type="button" class="icon" title="Remove card">✕</button></div>
     <?php endforeach; ?>
-    <button class="ghost" name="action" value="addrow">+ Add 5 rows</button>
-    <details <?= $bulk !== '' ? 'open' : '' ?>><summary>Bulk paste</summary>
-      <p class="muted">One pair per line, separated by a tab, “;” or “ - ”.</p>
-      <textarea name="bulk" rows="6" placeholder="talo;hus&#10;kissa;katt"><?= h($bulk) ?></textarea>
-      <button class="ghost" name="action" value="bulk">Add pasted cards</button>
-    </details>
+    </div>
+    <button type="button" class="chip" id="addrow">+ Add card</button>
   </div>
-  <?php if ($err): ?><p class="bad"><?= h($err) ?></p><?php endif; ?>
-  <button class="btn" name="action" value="save">Save pack</button>
-  <?php if ($id): ?><button class="ghost bad" name="action" value="delete" onclick="return confirm('Delete this pack?')">Delete</button><?php endif; ?>
+  <?php if ($err): ?><p class="alert"><?= h($err) ?></p><?php endif; ?>
+  <div class="row"><button class="btn" name="action" value="save">Save pack</button>
+  <?php if ($id): ?><button class="chip danger" name="action" value="delete" onclick="return confirm('Delete this pack?')">Delete</button><?php endif; ?></div>
 </form>
+
+<dialog id="bulkdlg"><h3>Bulk paste</h3>
+  <p class="muted">One pair per line, separated by a tab, “;” or “ - ”.</p>
+  <textarea id="bulktext" rows="8" placeholder="cat;gato&#10;dog;perro"></textarea>
+  <div class="row end"><button type="button" class="chip" id="bulkcancel">Cancel</button><button type="button" class="btn" id="bulkadd">Add cards</button></div>
+</dialog>
+
+<script>
+const LANGS = <?= json_encode(language_list(), JSON_UNESCAPED_UNICODE) ?>;
+let dirty = <?= $err ? 'true' : 'false' ?>;
+const rows = document.getElementById('rows'), form = document.getElementById('editform');
+const la = form.elements.lang_a, lb = form.elements.lang_b;
+
+function lev(a, b) { const d = Array.from({length: a.length + 1}, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length]; }
+function snap(s) { s = s.trim().replace(/\s+/g, ' '); const v = s.toLowerCase(); if (!v) return '';
+  const ex = LANGS.find(l => l.toLowerCase() === v); if (ex) return ex;
+  if (v.length >= 2) { const m = LANGS.filter(l => l.toLowerCase().startsWith(v)); if (m.length === 1) return m[0]; }
+  if (v.length >= 4) { let best = '', bd = 99; for (const l of LANGS) { const d = lev(l.toLowerCase(), v); if (d < bd) { bd = d; best = l; } } if (bd <= 2) return best; }
+  return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function placeholders() { // card placeholders follow the language fields live
+  document.querySelectorAll('.t-a').forEach(i => i.placeholder = la.value.trim() || 'Language 1');
+  document.querySelectorAll('.t-b').forEach(i => i.placeholder = lb.value.trim() || 'Language 2'); }
+[la, lb].forEach(el => { el.addEventListener('input', placeholders); el.addEventListener('change', () => { el.value = snap(el.value); placeholders(); }); });
+
+function addRow(t = '', d = '') {
+  const r = document.createElement('div'); r.className = 'row';
+  r.innerHTML = '<input class="t-a" name="term[]"><input class="t-b" name="def[]"><button type="button" class="icon" title="Remove card">✕</button>';
+  r.children[0].value = t; r.children[1].value = d; rows.appendChild(r); placeholders(); return r; }
+document.getElementById('addrow').onclick = () => { addRow().children[0].focus(); dirty = true; };
+rows.addEventListener('click', e => { if (e.target.matches('.icon')) { e.target.parentElement.remove(); dirty = true; } });
+
+const dlg = document.getElementById('bulkdlg'), bt = document.getElementById('bulktext');
+document.getElementById('bulkbtn').onclick = () => dlg.showModal();
+document.getElementById('bulkcancel').onclick = () => dlg.close();
+document.getElementById('bulkadd').onclick = () => {
+  const pairs = bt.value.split(/\r?\n/).map(l => l.split(/\t|;| - /)).filter(p => p.length >= 2 && p[0].trim());
+  if (pairs.length) {
+    [...rows.children].forEach(r => { if (!r.children[0].value.trim() && !r.children[1].value.trim()) r.remove(); });
+    pairs.forEach(p => addRow(p[0].trim(), p.slice(1).join(' ').trim())); dirty = true; }
+  bt.value = ''; dlg.close(); };
+
+form.addEventListener('input', () => dirty = true);
+form.addEventListener('submit', () => dirty = false);
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } }); // browser shows "Leave site? Changes may not be saved"
+placeholders();
+</script>
 <?php page_foot();

@@ -14,7 +14,7 @@ page_head($mine ? 'My packs' : 'Browse'); ?>
 <?php if (!$mine): ?>
 <form class="row" method="get">
   <input name="q" value="<?= h($q) ?>" placeholder="Search title or description">
-  <input name="tag" value="<?= h($tag) ?>" placeholder="Tag (e.g. finnish, high school)"><button class="btn">Search</button>
+  <input name="tag" value="<?= h($tag) ?>" placeholder="Tag (e.g. spanish, high school)"><button class="btn">Search</button>
 </form>
 <?php endif; ?>
 <div class="grid">

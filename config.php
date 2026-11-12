@@ -88,3 +88,27 @@ function diff_marks($u, $t) { // marks typed characters that match the answer (l
     }
     return $o;
 }
+
+// ---------- languages (shown in the dropdown; typed input snaps to the closest one) ----------
+function language_list() {
+    return ['English','Finnish','Swedish','Spanish','French','German','Italian','Portuguese','Dutch','Norwegian','Danish','Icelandic',
+        'Estonian','Latvian','Lithuanian','Polish','Czech','Slovak','Hungarian','Romanian','Bulgarian','Greek','Turkish','Russian','Ukrainian',
+        'Serbian','Croatian','Slovenian','Albanian','Arabic','Hebrew','Persian','Hindi','Bengali','Urdu','Tamil','Telugu','Nepali','Thai',
+        'Vietnamese','Indonesian','Malay','Filipino','Chinese','Japanese','Korean','Mongolian','Swahili','Somali','Afrikaans','Kurdish',
+        'Armenian','Georgian','Latin','Irish','Welsh','Catalan','Basque','Sami','Esperanto'];
+}
+function snap_language($s) {
+    $s = trim(preg_replace('/\s+/u', ' ', $s)); if ($s === '') return '';
+    $v = mb_strtolower($s); $L = language_list();
+    foreach ($L as $l) if (mb_strtolower($l) === $v) return $l;
+    if (mb_strlen($v) >= 2) {
+        $m = array_values(array_filter($L, fn($l) => mb_strpos(mb_strtolower($l), $v) === 0));
+        if (count($m) === 1) return $m[0];
+    }
+    if (mb_strlen($v) >= 4) {
+        $best = null; $bd = 99;
+        foreach ($L as $l) { $d = lev(mb_strtolower($l), $v); if ($d < $bd) { $bd = $d; $best = $l; } }
+        if ($bd <= 2) return $best;
+    }
+    return mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
+}
